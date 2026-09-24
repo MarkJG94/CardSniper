@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Watchlist · CardSniper{% endblock %}
+{% block content %}
+<h1>Watchlist</h1>
+<p class="muted">
+{% if settings.scan_mode == 'all' %}
+  CardSniper already scans <b>every card worth at least £{{ '%.2f'|format(settings.min_reference_gbp) }}</b>.
+  Watch rules let you set a different discount or condition for particular cards, and they apply even to cards below that minimum.
+{% else %}
+  Scan mode is <b>watchlist only</b>: only these cards are scanned.
+{% endif %}
+Watched cards are always checked first.
+</p>
+<form method="post" action="/watchlist" class="row panel" style="margin-bottom:18px">
+  <label>Card name (any printing)<input name="name" required placeholder="e.g. The One Ring" size="28"></label>
+  <label>Finish<select name="finish"><option value="any">Any</option><option value="nonfoil">Non-foil</option><option value="foil">Foil</option></select></label>
+  <label>Min condition<select name="min_condition"><option value="">Default ({{ settings.min_condition }})</option>
+    {% for c in CONDITIONS %}<option value="{{ c }}">{{ c }} – {{ CONDITION_NAMES[c] }}</option>{% endfor %}</select></label>
+  <label>% below market<input name="discount_percent" size="6" placeholder="{{ settings.discount_percent|round(1) }}"></label>
+  <label>Notes<input name="notes" size="18"></label>
+  <button class="primary">Add</button>
+  <span class="small muted">To watch one specific printing, find it on the <a href="/cards">Cards</a> page.</span>
+</form>
+<div class="table-wrap"><table>
+<thead><tr><th>Card</th><th>Finish</th><th>Min condition</th><th class="num">% below</th><th>Notes</th><th></th></tr></thead>
+<tbody>
+{% for r in rules %}
+<tr class="{{ '' if r.enabled else 'muted' }}">
+  <td>{% if r.card_id %}<a href="/cards/{{ r.card_id }}">{{ r.display_name }}</a>{% else %}{{ r.display_name }}{% endif %}
+      {% if not r.enabled %}<span class="chip">paused</span>{% endif %}</td>
+  <td>{{ r.finish }}</td>
+  <td>{{ r.min_condition or 'default' }}</td>
+  <td class="num">{{ ('%g%%'|format(r.discount_percent)) if r.discount_percent is not none else 'default' }}</td>
+  <td class="small">{{ r.notes or '' }}</td>
+  <td>
+    <form method="post" action="/watchlist/{{ r.id }}/toggle" class="inline"><button class="link">{{ 'pause' if r.enabled else 'resume' }}</button></form>
+    · <form method="post" action="/watchlist/{{ r.id }}/delete" class="inline"><button class="link danger">delete</button></form>
+  </td>
+</tr>
+{% else %}
+<tr><td colspan="6" class="muted">No watch rules yet.</td></tr>
+{% endfor %}
+</tbody></table></div>
+{% endblock %}

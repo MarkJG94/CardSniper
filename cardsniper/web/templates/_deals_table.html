@@ -1,0 +1,29 @@
+<div class="table-wrap"><table>
+<thead><tr>
+  <th></th><th>Card</th><th>Where</th><th class="num">Price</th><th class="num">Postage</th>
+  <th class="num">Market</th><th class="num">Below</th><th>Cond.</th><th>Seen</th><th>Alert</th><th></th>
+</tr></thead>
+<tbody>
+{% for d in deals %}
+<tr>
+  <td>{% if d.image_url %}<img class="thumb" src="{{ d.image_url }}" alt="" loading="lazy">{% endif %}</td>
+  <td>
+    {% if d.card_id %}<a href="/cards/{{ d.card_id }}">{{ d.card_name }}</a>{% else %}{{ d.card_name }}{% endif %}
+    {% if d.finish != 'nonfoil' %}<span class="chip">{{ d.finish }}</span>{% endif %}
+    {% if d.listing_type == 'auction' %}<span class="chip warn">auction · ends {{ d.auction_end|localtime }}</span>{% endif %}
+    <div class="small muted">{{ d.printing }}</div>
+  </td>
+  <td>{{ d.source_label }}<div class="small muted">{{ d.seller or '' }}</div></td>
+  <td class="num"><b>{{ d.price_gbp|gbp }}</b></td>
+  <td class="num">{% if d.shipping_gbp is not none %}{{ d.shipping_gbp|gbp }}{% else %}<span class="small muted note">{{ d.shipping_note or 'see listing' }}</span>{% endif %}</td>
+  <td class="num">{{ d.reference_gbp|gbp }}</td>
+  <td class="num disc">{{ '%.0f'|format(d.discount_pct) }}%</td>
+  <td>{{ d.condition or '?' }}</td>
+  <td class="small">{{ d.last_seen|ago }}</td>
+  <td>{% if d.alerted %}<span class="chip good">sent</span>{% else %}<span class="chip" title="{{ d.suppressed_reason or '' }}">held</span>{% endif %}</td>
+  <td><a class="btn primary" href="{{ d.url }}" target="_blank" rel="noopener">Buy</a></td>
+</tr>
+{% else %}
+<tr><td colspan="11" class="muted">No deals yet.</td></tr>
+{% endfor %}
+</tbody></table></div>

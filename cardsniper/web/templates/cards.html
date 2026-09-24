@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Cards · CardSniper{% endblock %}
+{% block content %}
+<h1>Cards</h1>
+<form class="row" method="get" style="margin-bottom:16px">
+  <label>Search the card database<input name="q" value="{{ q }}" placeholder="e.g. Ragavan" autofocus size="32"></label>
+  <button class="primary">Search</button>
+</form>
+{% for name, printings in groups.items() %}
+<h2>{{ name }}
+  <form method="post" action="/watchlist" class="inline">
+    <input type="hidden" name="name" value="{{ name }}"><input type="hidden" name="next_url" value="/cards?q={{ q|urlencode }}">
+    <button class="link small">+ watch any printing</button>
+  </form>
+</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Set</th><th>#</th><th>Rarity</th><th>Treatments</th><th class="num">Market (non-foil)</th><th class="num">Market (foil)</th><th></th></tr></thead>
+<tbody>
+{% for c in printings %}
+<tr>
+  <td><a href="/cards/{{ c.id }}">{{ c.set_name }}</a> <span class="muted small">{{ c.set_code|upper }}</span></td>
+  <td>{{ c.collector_number }}</td>
+  <td class="small">{{ c.rarity }}</td>
+  <td class="small muted">{{ c.treatments.replace(',', ', ') }}</td>
+  <td class="num">{{ (c.eur * fx.eur_to_gbp)|gbp if c.eur else '—' }}</td>
+  <td class="num">{{ (c.eur_foil * fx.eur_to_gbp)|gbp if c.eur_foil else '—' }}</td>
+  <td><a href="/cards/{{ c.id }}">details / watch</a></td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+{% else %}
+{% if q %}<p class="muted">No cards match "{{ q }}".</p>{% else %}<p class="muted">Search for a card to see every printing, its market price and history, and to add it to your watchlist.</p>{% endif %}
+{% endfor %}
+{% endblock %}

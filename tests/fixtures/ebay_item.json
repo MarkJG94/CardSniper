@@ -1,0 +1,11 @@
+{"itemId": "v1|111|0", "title": "MTG Sheoldred, the Apocalypse Dominaria United NM",
+ "conditionDescriptors": [{"name": "Card Condition", "values": [{"content": "Near mint or better"}]}],
+ "localizedAspects": [
+   {"type": "STRING", "name": "Game", "value": "Magic: The Gathering"},
+   {"type": "STRING", "name": "Card Name", "value": "Sheoldred, the Apocalypse"},
+   {"type": "STRING", "name": "Set", "value": "Dominaria United"},
+   {"type": "STRING", "name": "Language", "value": "English"},
+   {"type": "STRING", "name": "Finish", "value": "Regular"},
+   {"type": "STRING", "name": "Graded", "value": "No"}
+ ],
+ "shippingOptions": [{"shippingCost": {"value": "0.95", "currency": "GBP"}}]}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}CardSniper{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header><div class="inner">
+  <a class="brand" href="/">🎯 CardSniper</a>
+  <nav>
+    {% set p = request.url.path %}
+    <a href="/" class="{{ 'on' if p == '/' }}">Dashboard</a>
+    <a href="/deals" class="{{ 'on' if p.startswith('/deals') }}">Deals</a>
+    <a href="/cards" class="{{ 'on' if p.startswith('/cards') }}">Cards</a>
+    <a href="/watchlist" class="{{ 'on' if p.startswith('/watchlist') }}">Watchlist</a>
+    <a href="/runs" class="{{ 'on' if p.startswith('/runs') }}">Run log</a>
+    <a href="/settings" class="{{ 'on' if p.startswith('/settings') }}">Settings</a>
+  </nav>
+</div></header>
+<main>
+  {% if msg %}<div class="flash ok">{{ msg }}</div>{% endif %}
+  {% if err %}<div class="flash err">{{ err }}</div>{% endif %}
+  {% if current %}
+  <div class="flash running">
+    ⏳ Running: <b>{{ current.source }}</b> {{ 'card database refresh' if current.kind == 'carddb' else 'scan' }}
+    · started {{ current.started|ago }}
+    {% if current.listings is defined %} · {{ current.listings }} listings checked · {{ current.deals }} deals{% endif %}
+  </div>
+  {% endif %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

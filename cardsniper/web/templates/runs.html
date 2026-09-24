@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Run log · CardSniper{% endblock %}
+{% block content %}
+<h1>Run log</h1>
+<div class="table-wrap"><table>
+<thead><tr><th>Started</th><th>What</th><th>Trigger</th><th>Status</th><th>Duration</th><th class="num">Checked</th><th class="num">Listings</th><th class="num">Deals</th><th class="num">Alerts</th><th class="num">Errors</th></tr></thead>
+<tbody>
+{% for r in runs %}
+<tr>
+  <td class="small">{{ r.started_at|localtime }}</td>
+  <td>{{ labels.get(r.source, r.source) }}{% if r.message %}<pre class="msg">{{ r.message }}</pre>{% endif %}</td>
+  <td class="small">{{ r.trigger }}</td>
+  <td><span class="chip {{ {'ok':'good','partial':'warn','error':'bad','skipped':'warn'}.get(r.status, '') }}">{{ r.status }}</span></td>
+  <td class="small">{% if r.finished_at %}{{ ((r.finished_at - r.started_at).total_seconds() / 60)|round(1) }} min{% endif %}</td>
+  <td class="num">{{ r.items_checked }}</td><td class="num">{{ r.listings_seen }}</td>
+  <td class="num">{{ r.deals_found }}</td><td class="num">{{ r.alerts_sent }}</td><td class="num">{{ r.errors }}</td>
+</tr>
+{% else %}<tr><td colspan="10" class="muted">Nothing has run yet.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Deals · CardSniper{% endblock %}
+{% block content %}
+<h1>Deals <span class="muted small">{{ total }} found</span></h1>
+<form class="row" method="get" style="margin-bottom:14px">
+  <label>Card<input name="q" value="{{ q }}" placeholder="name contains…"></label>
+  <label>Source<select name="source"><option value="">All</option>
+    {% for s in sources %}<option value="{{ s.key }}" {{ 'selected' if s.key == source }}>{{ s.label }}</option>{% endfor %}
+  </select></label>
+  <label>Show<select name="alerted"><option value="">All deals</option><option value="1" {{ 'selected' if alerted == '1' }}>Alerted only</option></select></label>
+  <button>Filter</button>
+</form>
+<p class="small muted">"Held" = a deal that met your threshold but wasn't sent, usually because a cheaper one for the same card was already alerted. Hover to see why.</p>
+{% include "_deals_table.html" %}
+<p class="row" style="margin-top:12px">
+  {% if page > 1 %}<a class="btn" href="?q={{ q }}&source={{ source }}&alerted={{ alerted }}&page={{ page - 1 }}">← Newer</a>{% endif %}
+  {% if total > page * 100 %}<a class="btn" href="?q={{ q }}&source={{ source }}&alerted={{ alerted }}&page={{ page + 1 }}">Older →</a>{% endif %}
+</p>
+{% endblock %}

@@ -1,0 +1,77 @@
+# CardSniper configuration. Copy to config.yaml and adjust.
+# Secrets (email, Telegram, eBay keys, dashboard password) go in .env, not here.
+#
+# Day-to-day settings (discount %, minimum card value, scan interval, condition,
+# foils, ...) are changed on the dashboard's Settings page. The "defaults" block
+# below only seeds them the very first time the app starts.
+
+data_dir: ./data          # database, logs, browser profile, Scryfall download
+timezone: Europe/London
+
+web:
+  host: 0.0.0.0           # listen on your LAN; use 127.0.0.1 to keep it local-only
+  port: 8080
+
+defaults:
+  scan_mode: all          # all = every card worth >= min_reference_gbp; watchlist = only watched cards
+  scan_interval_hours: 24
+  card_db_refresh_hours: 24
+  discount_percent: 20    # alert when this far below the Cardmarket trend price (in GBP)
+  min_reference_gbp: 5    # ignore cards worth less than this (unless watched)
+  min_condition: EX       # MT NM EX GD LP PL PO (Cardmarket scale)
+  realert_days: 7
+
+fx:
+  fallback_eur_to_gbp: 0.85   # only used if the ECB rate can't be fetched
+
+http:
+  min_delay_seconds: 2
+  max_delay_seconds: 5
+  browser: playwright     # playwright | camoufox | none  - used when a site shows a bot check
+  headless: false         # headful passes bot checks far more often; run under xvfb-run on a server
+  challenge_timeout_seconds: 60
+  # browser_executable: /usr/bin/chromium   # optional: use a system Chromium instead
+
+sources:
+  cardmarket:
+    enabled: true
+    fetch_mode: auto      # auto = fast HTTP, real browser only when challenged; browser = always browser
+    max_products_per_run: 400   # product pages per run; the rest are picked up on following runs
+    min_delay_seconds: 4
+    max_delay_seconds: 9
+    seller_country: 13    # United Kingdom
+    language: 1           # English
+
+  ebay:
+    enabled: true
+    category_ids: "183454"     # CCG Individual Cards
+    item_location_country: GB  # UK sellers only
+    condition_ids: "4000"      # Ungraded only
+    include_auctions: true
+    max_queries_per_run: 4000  # the free API allows 5000 calls/day
+
+  # UK shops. platform: auto detects Shopify (whole catalogue read each run) and
+  # otherwise searches the shop for each card. If a shop's search page isn't
+  # parsed correctly, add CSS selectors, e.g.
+  #   selectors: {item: ".product-card", title: ".title a", link: ".title a", price: ".price", stock: ".stock"}
+  # and check it with:  cardsniper probe "Shop Name" "Sheoldred, the Apocalypse"
+  stores:
+    - name: Total Cards
+      url: https://totalcards.net
+      collection: magic-the-gathering-single-cards
+      shipping_note: free UK delivery over £20
+    - name: Axion Now
+      url: https://axionnow.com
+    - name: Manaleak
+      url: https://www.manaleak.com
+    - name: Magic Madhouse
+      url: https://magicmadhouse.co.uk
+      shipping_note: free UK delivery
+    - name: Chaos Cards
+      url: https://www.chaoscards.co.uk
+    - name: Big Orbit Cards
+      url: https://www.bigorbitcards.co.uk
+      search_url: "https://www.bigorbitcards.co.uk/search/?q={query}"
+      shipping_note: free UK delivery over £30
+    - name: Mage Cards
+      url: https://www.magecards.co.uk

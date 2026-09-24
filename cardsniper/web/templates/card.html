@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ card.name }} · CardSniper{% endblock %}
+{% block content %}
+<div class="card-head">
+  {% if card.image_url %}<img src="{{ card.image_url }}" alt="{{ card.name }}">{% endif %}
+  <div style="flex:1;min-width:260px">
+    <h1>{{ card.name }}</h1>
+    <p>{{ card.set_name }} ({{ card.set_code|upper }}) #{{ card.collector_number }} · {{ card.rarity }} · released {{ card.released_at }}
+      {% if card.treatments %}<br><span class="small muted">{{ card.treatments.replace(',', ', ') }}</span>{% endif %}</p>
+    <div class="tiles" style="max-width:420px">
+      <div class="tile"><div class="v">{{ (card.eur * fx.eur_to_gbp)|gbp if card.eur else '—' }}</div><div class="k">market, non-foil</div></div>
+      <div class="tile"><div class="v">{{ (card.eur_foil * fx.eur_to_gbp)|gbp if card.eur_foil else '—' }}</div><div class="k">market, foil</div></div>
+    </div>
+    <p class="small muted">Market = Cardmarket trend price (via Scryfall) converted to GBP. Finishes: {{ card.finishes.replace(',', ', ') }}.</p>
+    <p><a href="{{ card.scryfall_uri }}" target="_blank" rel="noopener">Scryfall</a>
+      {% if card.cardmarket_id %} · <a href="{{ card.cardmarket_url or 'https://www.cardmarket.com/en/Magic/Products?idProduct=' ~ card.cardmarket_id }}" target="_blank" rel="noopener">Cardmarket</a>{% endif %}</p>
+
+    <h2>Watch this card</h2>
+    <form method="post" action="/watchlist" class="row">
+      <input type="hidden" name="next_url" value="/cards/{{ card.id }}">
+      <label>Which printings<select name="card_id">
+        <option value="{{ card.id }}">Only this printing</option>
+        <option value="">Any printing</option>
+      </select></label>
+      <input type="hidden" name="name" value="{{ card.name }}">
+      <label>Finish<select name="finish"><option value="any">Any</option><option value="nonfoil">Non-foil</option><option value="foil">Foil</option></select></label>
+      <label>Min condition<select name="min_condition"><option value="">Default</option>
+        {% for c in CONDITIONS %}<option value="{{ c }}">{{ c }} – {{ CONDITION_NAMES[c] }}</option>{% endfor %}</select></label>
+      <label>% below market<input name="discount_percent" size="6" placeholder="default"></label>
+      <button class="primary">Add</button>
+    </form>
+    {% if rules %}
+    <ul class="small">{% for r in rules %}
+      <li>{{ r.display_name }} · {{ r.finish }} · {{ r.min_condition or 'default condition' }} ·
+          {{ ('%g%%'|format(r.discount_percent)) if r.discount_percent is not none else 'default %' }}
+          {% if not r.enabled %}(paused){% endif %}
+        <form method="post" action="/watchlist/{{ r.id }}/delete" class="inline"><input type="hidden" name="next_url" value="/cards/{{ card.id }}"><button class="link danger">remove</button></form></li>
+    {% endfor %}</ul>
+    {% endif %}
+  </div>
+</div>
+
+{% if charts %}
+<h2>Market price history</h2>
+<div class="grid2">
+  {% for finish, svg in charts.items() %}<div class="panel"><div class="small muted">{{ finish }}</div>{{ svg|safe }}</div>{% endfor %}
+</div>
+{% endif %}
+
+<h2>Deals for this card</h2>
+{% include "_deals_table.html" %}
+
+{% if others %}
+<h2>Other printings</h2>
+<div class="table-wrap"><table><tbody>
+{% for c in others %}<tr><td><a href="/cards/{{ c.id }}">{{ c.set_name }} #{{ c.collector_number }}</a> <span class="small muted">{{ c.treatments.replace(',', ', ') }}</span></td>
+<td class="num">{{ (c.eur * fx.eur_to_gbp)|gbp if c.eur else '—' }}</td><td class="num">{{ (c.eur_foil * fx.eur_to_gbp)|gbp if c.eur_foil else '—' }} foil</td></tr>{% endfor %}
+</tbody></table></div>
+{% endif %}
+{% endblock %}

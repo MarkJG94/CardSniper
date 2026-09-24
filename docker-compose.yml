@@ -1,0 +1,12 @@
+services:
+  cardsniper:
+    build: .
+    container_name: cardsniper
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file: .env
+    volumes:
+      - ./data:/data
+      - ./config.yaml:/config/config.yaml:ro
+    shm_size: "1gb"   # Chromium needs more shared memory than Docker's 64MB default

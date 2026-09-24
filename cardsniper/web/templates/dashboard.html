@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Dashboard</h1>
+<div class="tiles">
+  <div class="tile"><div class="v">{{ '{:,}'.format(stats.cards) }}</div><div class="k">printings in card database</div></div>
+  <div class="tile"><div class="v">{{ stats.deals_24h }}</div><div class="k">deals found (24h)</div></div>
+  <div class="tile"><div class="v">{{ stats.alerts_24h }}</div><div class="k">alerts sent (24h)</div></div>
+  <div class="tile"><div class="v">{{ stats.rules }}</div><div class="k">watch rules</div></div>
+  <div class="tile"><div class="v">{{ next_scan|localtime('%a %H:%M') }}</div><div class="k">next scan (every {{ settings.scan_interval_hours|round(2) }}h)</div></div>
+  <div class="tile"><div class="v">{{ '%.4f'|format(fx.eur_to_gbp) }}</div><div class="k">EUR → GBP rate</div></div>
+</div>
+
+<p class="small muted" style="margin-top:12px">
+  Mode: <b>{{ 'all cards worth ≥ £%.2f'|format(settings.min_reference_gbp) if settings.scan_mode == 'all' else 'watchlist only' }}</b>
+  · alert at <b>{{ settings.discount_percent|round(1) }}%</b> below market
+  · min condition <b>{{ settings.min_condition }}</b>
+  · alerts via <b>{{ channels|join(', ') if channels else 'nothing configured!' }}</b>
+</p>
+
+<div class="row" style="margin:14px 0 4px">
+  <form method="post" action="/run" class="inline"><input type="hidden" name="kind" value="scan"><button class="primary">Scan all sources now</button></form>
+  <form method="post" action="/run" class="inline"><input type="hidden" name="kind" value="carddb"><button>Refresh card database</button></form>
+  <span class="small muted">Card DB: {{ carddb.status if carddb else 'never refreshed' }}{% if carddb %} {{ carddb.started_at|ago }} · next {{ next_carddb|localtime }}{% endif %}</span>
+</div>
+
+<h2>Sources</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Source</th><th>Last run</th><th>Status</th><th class="num">Checked</th><th class="num">Listings</th><th class="num">Deals</th><th class="num">Alerts</th><th></th></tr></thead>
+<tbody>
+{% for src in sources %}{% set r = last_runs[src.key] %}
+<tr>
+  <td>{{ src.label }}{% if not settings.source_enabled(src.key) %} <span class="chip">disabled</span>{% endif %}
+      {% if src.available() %}<div class="small muted">{{ src.available() }}</div>{% endif %}</td>
+  <td>{{ r.started_at|ago if r else 'never' }}</td>
+  <td>{% if r %}<span class="chip {{ {'ok':'good','partial':'warn','error':'bad','skipped':'warn'}.get(r.status, '') }}">{{ r.status }}</span>{% endif %}
+      {% if r and r.message %}<pre class="msg">{{ r.message[:300] }}</pre>{% endif %}</td>
+  <td class="num">{{ r.items_checked if r else '' }}</td>
+  <td class="num">{{ r.listings_seen if r else '' }}</td>
+  <td class="num">{{ r.deals_found if r else '' }}</td>
+  <td class="num">{{ r.alerts_sent if r else '' }}</td>
+  <td><form method="post" action="/run" class="inline"><input type="hidden" name="source" value="{{ src.key }}"><button class="link">Scan now</button></form></td>
+</tr>
+{% endfor %}
+</tbody></table></div>
+
+<h2>Latest deals <a class="small" href="/deals">all deals →</a></h2>
+{% set deals = recent %}{% include "_deals_table.html" %}
+{% endblock %}

@@ -1,0 +1,16 @@
+{"products": [
+  {"id": 1, "title": "Sheoldred, the Apocalypse [Dominaria United]", "handle": "sheoldred-the-apocalypse-dominaria-united",
+   "product_type": "MTG Single", "tags": ["Dominaria United", "Mythic"],
+   "images": [{"src": "https://cdn.example/sheoldred.jpg"}],
+   "variants": [
+     {"id": 101, "title": "Near Mint", "price": "45.00", "available": true},
+     {"id": 102, "title": "Lightly Played", "price": "40.00", "available": true},
+     {"id": 103, "title": "Near Mint Foil", "price": "55.00", "available": false},
+     {"id": 104, "title": "Near Mint / Japanese", "price": "30.00", "available": true}
+   ]},
+  {"id": 2, "title": "Dominaria United Play Booster Box", "handle": "dmu-box", "product_type": "Sealed", "tags": [],
+   "variants": [{"id": 201, "title": "Default Title", "price": "99.00", "available": true}]},
+  {"id": 3, "title": "Ragavan, Nimble Pilferer (Borderless) [Modern Horizons 2]", "handle": "ragavan-borderless",
+   "product_type": "MTG Single", "tags": [],
+   "variants": [{"id": 301, "title": "Default Title", "price": "20.00", "available": true}]}
+]}

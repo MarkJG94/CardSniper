@@ -1,0 +1,11 @@
+{"total": 3, "itemSummaries": [
+  {"itemId": "v1|111|0", "title": "MTG Sheoldred, the Apocalypse Dominaria United NM", "price": {"value": "40.00", "currency": "GBP"},
+   "buyingOptions": ["FIXED_PRICE"], "itemWebUrl": "https://www.ebay.co.uk/itm/111", "condition": "Ungraded", "conditionId": "4000",
+   "shippingOptions": [{"shippingCostType": "FIXED", "shippingCost": {"value": "1.20", "currency": "GBP"}}],
+   "seller": {"username": "cardshop_uk"}, "itemLocation": {"country": "GB"}, "image": {"imageUrl": "https://i.ebayimg.com/1.jpg"}},
+  {"itemId": "v1|222|0", "title": "Sheoldred the Apocalypse DMU auction", "currentBidPrice": {"value": "20.00", "currency": "GBP"},
+   "price": {"value": "20.00", "currency": "GBP"}, "buyingOptions": ["AUCTION"], "itemEndDate": "2030-01-01T12:00:00.000Z",
+   "itemWebUrl": "https://www.ebay.co.uk/itm/222", "seller": {"username": "bidder"}, "itemLocation": {"country": "GB"}},
+  {"itemGroupHref": "https://api.ebay.com/buy/browse/v1/item/get_items_by_item_group?item_group_id=333", "itemGroupType": "SELLER_DEFINED_VARIATIONS",
+   "itemId": "v1|333|0", "title": "MTG singles pick your card Sheoldred", "price": {"value": "1.00", "currency": "GBP"}, "buyingOptions": ["FIXED_PRICE"]}
+]}
