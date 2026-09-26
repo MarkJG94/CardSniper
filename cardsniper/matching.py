@@ -172,9 +172,14 @@ class CardIndex:
     def from_session(cls, session) -> "CardIndex":
         from .models import Card
 
+        from sqlalchemy import func
+
         rows = session.query(
             Card.id, Card.name, Card.name_norm, Card.front_norm, Card.set_code, Card.set_name,
-            Card.collector_number, Card.finishes, Card.treatments, Card.eur, Card.eur_foil,
+            Card.collector_number, Card.finishes, Card.treatments,
+            # market price: Cardmarket's own price guide, else Scryfall's copy of it
+            func.coalesce(Card.cm_trend, Card.eur).label("eur"),
+            func.coalesce(Card.cm_trend_foil, Card.eur_foil).label("eur_foil"),
         ).yield_per(5000)
         refs, fronts = [], {}
         for r in rows:

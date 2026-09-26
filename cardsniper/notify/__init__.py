@@ -26,6 +26,14 @@ def _local(dt, tz: str) -> str:
 
 
 def deal_lines(deal: Deal, tz: str) -> list[tuple[str, str]]:
+    if deal.indicative:
+        return [
+            ("Printing", f"{deal.printing or '?'} · {FINISH_LABEL.get(deal.finish, deal.finish)}"),
+            ("Lowest listing", f"£{deal.price_gbp:.2f} from any EU seller, any condition/language"),
+            ("Market", f"£{deal.reference_gbp:.2f} trend - lowest listing is {deal.discount_pct:.0f}% below"),
+            ("Next step", "open the link: it shows UK sellers, English, your minimum condition"),
+            ("Where", deal.source_label),
+        ]
     postage = (f"£{deal.shipping_gbp:.2f} extra" if deal.shipping_gbp is not None
                else (deal.shipping_note or "see listing"))
     if deal.shipping_gbp is not None and deal.shipping_note:
@@ -47,11 +55,20 @@ def deal_lines(deal: Deal, tz: str) -> list[tuple[str, str]]:
     return lines
 
 
+def button_label(deal: Deal) -> str:
+    return "Check UK sellers on Cardmarket" if deal.indicative else f"Open listing on {deal.source_label}"
+
+
 def format_deal(deal: Deal, tz: str) -> tuple[str, str, str]:
-    subject = f"£{deal.price_gbp:.2f} {deal.card_name} ({deal.discount_pct:.0f}% below market) - {deal.source_label}"
+    if deal.indicative:
+        subject = (f"Cardmarket: {deal.card_name} listed {deal.discount_pct:.0f}% below trend "
+                   f"(from £{deal.price_gbp:.2f}) - check UK sellers")
+    else:
+        subject = f"£{deal.price_gbp:.2f} {deal.card_name} ({deal.discount_pct:.0f}% below market) - {deal.source_label}"
     lines = deal_lines(deal, tz)
-    text = "\n".join([f"Deal: {deal.card_name}", ""] + [f"{k}: {v}" for k, v in lines] +
-                     ["", f"Buy: {deal.url}", "", f"Listing: {deal.title}"])
+    text = "\n".join([f"{'Possible deal' if deal.indicative else 'Deal'}: {deal.card_name}", ""] +
+                     [f"{k}: {v}" for k, v in lines] +
+                     ["", f"{'Check UK sellers' if deal.indicative else 'Buy'}: {deal.url}", "", f"Listing: {deal.title}"])
     rows = "".join(f"<tr><td style='color:#666;padding:2px 12px 2px 0'>{html.escape(k)}</td>"
                    f"<td>{html.escape(v)}</td></tr>" for k, v in lines)
     image = (f"<img src='{html.escape(deal.image_url)}' width='160' style='float:right;margin-left:12px;"
@@ -60,8 +77,7 @@ def format_deal(deal: Deal, tz: str) -> tuple[str, str, str]:
             f"<h2 style='margin:0 0 8px'>{html.escape(deal.card_name)}</h2>"
             f"<table style='font-size:14px'>{rows}</table>"
             f"<p><a href='{html.escape(deal.url)}' style='display:inline-block;background:#1f6feb;color:#fff;"
-            f"padding:10px 16px;border-radius:6px;text-decoration:none'>Open listing on "
-            f"{html.escape(deal.source_label)}</a></p>"
+            f"padding:10px 16px;border-radius:6px;text-decoration:none'>{html.escape(button_label(deal))}</a></p>"
             f"<p style='color:#888;font-size:12px'>{html.escape(deal.title)}</p></div>")
     return subject, text, body
 
@@ -109,9 +125,12 @@ class TelegramChannel:
 
 
 def telegram_text(deal: Deal, tz: str) -> str:
-    lines = [f"🎯 <b>{html.escape(deal.card_name)}</b> - {deal.discount_pct:.0f}% below market"]
+    if deal.indicative:
+        lines = [f"🔎 <b>{html.escape(deal.card_name)}</b> - Cardmarket listing {deal.discount_pct:.0f}% below trend"]
+    else:
+        lines = [f"🎯 <b>{html.escape(deal.card_name)}</b> - {deal.discount_pct:.0f}% below market"]
     lines += [f"<b>{html.escape(k)}:</b> {html.escape(v)}" for k, v in deal_lines(deal, tz)]
-    lines.append(f'\n<a href="{html.escape(deal.url)}">Open listing</a>')
+    lines.append(f'\n<a href="{html.escape(deal.url)}">{html.escape(button_label(deal))}</a>')
     return "\n".join(lines)
 
 
@@ -132,7 +151,7 @@ class Notifier:
                 if isinstance(ch, EmailChannel):
                     ch.send(subject, text, body)
                 else:
-                    ch.send(telegram_text(deal, self.tz), (f"Open on {deal.source_label}", deal.url))
+                    ch.send(telegram_text(deal, self.tz), (button_label(deal), deal.url))
                 results[ch.name] = None
             except Exception as exc:
                 log.warning("%s alert failed: %s", ch.name, exc)

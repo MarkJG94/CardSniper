@@ -147,3 +147,17 @@ def test_recorder_without_channels(db, index, fx, settings, sheoldred):
     with db.session() as s:
         deal, sent = DealRecorder(s, settings, None).record(ev)
         assert not sent and deal.suppressed_reason == "no notification channel configured"
+
+
+def test_alert_limit_per_run(db, index, fx, sheoldred):
+    settings = UserSettings(max_alerts_per_run=2)
+    evaluator = Evaluator(settings, index, fx, [])
+    notifier = FakeNotifier()
+    with db.session() as s:
+        rec = DealRecorder(s, settings, notifier)
+        results = []
+        for i, price in enumerate([3.0, 2.0, 1.0]):  # each cheaper, so each would alert
+            results.append(rec.record(evaluator.evaluate(listing(sheoldred, price, key=str(i)))))
+    assert [sent for _, sent in results] == [True, True, False]
+    assert "alert limit of 2" in results[2][0].suppressed_reason
+    assert len(notifier.sent) == 2

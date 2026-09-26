@@ -8,12 +8,21 @@
     <p>{{ card.set_name }} ({{ card.set_code|upper }}) #{{ card.collector_number }} · {{ card.rarity }} · released {{ card.released_at }}
       {% if card.treatments %}<br><span class="small muted">{{ card.treatments.replace(',', ', ') }}</span>{% endif %}</p>
     <div class="tiles" style="max-width:420px">
-      <div class="tile"><div class="v">{{ (card.eur * fx.eur_to_gbp)|gbp if card.eur else '—' }}</div><div class="k">market, non-foil</div></div>
-      <div class="tile"><div class="v">{{ (card.eur_foil * fx.eur_to_gbp)|gbp if card.eur_foil else '—' }}</div><div class="k">market, foil</div></div>
+      <div class="tile"><div class="v">{{ (card.ref_eur * fx.eur_to_gbp)|gbp if card.ref_eur else '—' }}</div><div class="k">market, non-foil</div></div>
+      <div class="tile"><div class="v">{{ (card.ref_eur_foil * fx.eur_to_gbp)|gbp if card.ref_eur_foil else '—' }}</div><div class="k">market, foil</div></div>
     </div>
-    <p class="small muted">Market = Cardmarket trend price (via Scryfall) converted to GBP. Finishes: {{ card.finishes.replace(',', ', ') }}.</p>
+    <p class="small muted">Market = Cardmarket trend price in GBP{{ ' (Cardmarket price guide)' if card.cm_updated else ' (via Scryfall)' }}. Finishes: {{ card.finishes.replace(',', ', ') }}.</p>
+    {% if card.cm_updated %}
+    <div class="table-wrap" style="max-width:680px"><table>
+      <thead><tr><th>Cardmarket (all EU sellers)</th><th class="num">Trend</th><th class="num">Lowest listing</th><th class="num">Avg sale 1d</th><th class="num">7d</th><th class="num">30d</th></tr></thead>
+      <tbody>{% for label, f in [('Non-foil', 'nonfoil'), ('Foil', 'foil')] %}{% if card.cm_stat('trend', f) or card.cm_stat('low', f) %}
+      <tr><td>{{ label }}</td>{% for stat in ['trend', 'low', 'avg1', 'avg7', 'avg30'] %}{% set v = card.cm_stat(stat, f) %}
+        <td class="num">{{ (v * fx.eur_to_gbp)|gbp if v else '—' }}</td>{% endfor %}</tr>
+      {% endif %}{% endfor %}</tbody></table></div>
+    <p class="small muted">Price guide updated {{ card.cm_updated|ago }}.</p>
+    {% endif %}
     <p><a href="{{ card.scryfall_uri }}" target="_blank" rel="noopener">Scryfall</a>
-      {% if card.cardmarket_id %} · <a href="{{ card.cardmarket_url or 'https://www.cardmarket.com/en/Magic/Products?idProduct=' ~ card.cardmarket_id }}" target="_blank" rel="noopener">Cardmarket</a>{% endif %}</p>
+      {% if card.cardmarket_id %} · <a href="https://www.cardmarket.com/en/Magic/Products?idProduct={{ card.cardmarket_id }}&sellerCountry=13&language=1" target="_blank" rel="noopener">Cardmarket (UK sellers)</a>{% endif %}</p>
 
     <h2>Watch this card</h2>
     <form method="post" action="/watchlist" class="row">
@@ -54,7 +63,7 @@
 <h2>Other printings</h2>
 <div class="table-wrap"><table><tbody>
 {% for c in others %}<tr><td><a href="/cards/{{ c.id }}">{{ c.set_name }} #{{ c.collector_number }}</a> <span class="small muted">{{ c.treatments.replace(',', ', ') }}</span></td>
-<td class="num">{{ (c.eur * fx.eur_to_gbp)|gbp if c.eur else '—' }}</td><td class="num">{{ (c.eur_foil * fx.eur_to_gbp)|gbp if c.eur_foil else '—' }} foil</td></tr>{% endfor %}
+<td class="num">{{ (c.ref_eur * fx.eur_to_gbp)|gbp if c.ref_eur else '—' }}</td><td class="num">{{ (c.ref_eur_foil * fx.eur_to_gbp)|gbp if c.ref_eur_foil else '—' }} foil</td></tr>{% endfor %}
 </tbody></table></div>
 {% endif %}
 {% endblock %}

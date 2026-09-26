@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Callable, Iterator
 
 import httpx
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.dialects.sqlite import insert
 
 from .config import Config
@@ -18,6 +18,7 @@ from .currency import get_fx
 from .db import Database
 from .matching import norm, treatments_for
 from .models import Card, PriceHistory, WatchRule, utcnow
+from .priceguide import refresh_price_guide
 from .settings import get_value, load_settings, set_value
 
 log = logging.getLogger(__name__)
@@ -149,8 +150,10 @@ def snapshot_prices(db: Database, cfg: Config) -> int:
         floor_eur = settings.min_reference_gbp * 0.5 / fx.eur_to_gbp
         watched_ids = {r.card_id for r in s.query(WatchRule).filter(WatchRule.card_id.isnot(None))}
         watched_names = {r.oracle_name for r in s.query(WatchRule).filter(WatchRule.oracle_name.isnot(None))}
-        q = select(Card.id, Card.eur, Card.eur_foil).where(or_(
-            Card.eur >= floor_eur, Card.eur_foil >= floor_eur,
+        eur = func.coalesce(Card.cm_trend, Card.eur)
+        eur_foil = func.coalesce(Card.cm_trend_foil, Card.eur_foil)
+        q = select(Card.id, eur, eur_foil).where(or_(
+            eur >= floor_eur, eur_foil >= floor_eur,
             Card.id.in_(watched_ids or [""]), Card.name_norm.in_(watched_names or [""])))
         rows = []
         for cid, eur, eur_foil in s.execute(q):
@@ -177,8 +180,17 @@ def refresh_card_db(db: Database, cfg: Config, force: bool = False) -> dict:
                                 progress=lambda n: log.info("imported %d printings", n) if n % 20000 == 0 else None)
         with db.session() as s:
             set_value(s, "carddb_imported", updated_at)
+    guide = None
+    if cfg.cardmarket.enabled:
+        try:
+            with db.session() as s:
+                guide = refresh_price_guide(s, cfg, force=True)
+        except Exception as exc:  # keep Scryfall prices if Cardmarket's file is unavailable
+            log.warning("Cardmarket price guide not updated: %s", exc)
+            guide = {"error": str(exc)}
     snapshots = snapshot_prices(db, cfg)
     with db.session() as s:
         total = s.query(Card).count()
     log.info("Card DB refreshed: %d printings imported, %d in DB, %d price snapshots", imported, total, snapshots)
-    return {"imported": imported, "total": total, "snapshots": snapshots, "scryfall_updated_at": updated_at}
+    return {"imported": imported, "total": total, "snapshots": snapshots, "scryfall_updated_at": updated_at,
+            "price_guide": guide}

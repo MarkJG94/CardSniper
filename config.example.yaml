@@ -16,7 +16,8 @@ defaults:
   scan_mode: all          # all = every card worth >= min_reference_gbp; watchlist = only watched cards
   scan_interval_hours: 24
   card_db_refresh_hours: 24
-  discount_percent: 20    # alert when this far below the Cardmarket trend price (in GBP)
+  discount_percent: 20    # eBay/shops: alert when this far below the Cardmarket trend price (in GBP)
+  cardmarket_discount_percent: 30  # Cardmarket: alert when its lowest EU listing is this far below trend
   min_reference_gbp: 5    # ignore cards worth less than this (unless watched)
   min_condition: EX       # MT NM EX GD LP PL PO (Cardmarket scale)
   realert_days: 7
@@ -27,20 +28,21 @@ fx:
 http:
   min_delay_seconds: 2
   max_delay_seconds: 5
-  browser: playwright     # playwright | camoufox | none  - used when a site shows a bot check
+  browser: playwright     # playwright | camoufox | none  - used when a shop shows a bot check
   headless: false         # headful passes bot checks far more often; run under xvfb-run on a server
   challenge_timeout_seconds: 60
   # browser_executable: /usr/bin/chromium   # optional: use a system Chromium instead
 
 sources:
   cardmarket:
+    # Read from Cardmarket's official daily price guide download - no page scraping.
+    # It only has EU-wide figures, so a Cardmarket alert means "the cheapest listing from
+    # any EU seller is far below trend" and links to UK sellers for you to check.
     enabled: true
-    fetch_mode: auto      # auto = fast HTTP, real browser only when challenged; browser = always browser
-    max_products_per_run: 400   # product pages per run; the rest are picked up on following runs
-    min_delay_seconds: 4
-    max_delay_seconds: 9
-    seller_country: 13    # United Kingdom
-    language: 1           # English
+    price_guide_url: https://downloads.s3.cardmarket.com/productCatalog/priceGuide/price_guide_1.json
+    refresh_hours: 6        # Cardmarket publishes it once a day
+    seller_country: 13      # United Kingdom (used in alert links)
+    language: 1             # English (used in alert links)
 
   ebay:
     enabled: true

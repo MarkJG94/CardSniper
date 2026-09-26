@@ -12,7 +12,7 @@
 
 <p class="small muted" style="margin-top:12px">
   Mode: <b>{{ 'all cards worth ≥ £%.2f'|format(settings.min_reference_gbp) if settings.scan_mode == 'all' else 'watchlist only' }}</b>
-  · alert at <b>{{ settings.discount_percent|round(1) }}%</b> below market
+  · alert at <b>{{ settings.discount_percent|round(1) }}%</b> below market (Cardmarket <b>{{ settings.cardmarket_discount_percent|round(1) }}%</b>)
   · min condition <b>{{ settings.min_condition }}</b>
   · alerts via <b>{{ channels|join(', ') if channels else 'nothing configured!' }}</b>
 </p>
@@ -20,7 +20,8 @@
 <div class="row" style="margin:14px 0 4px">
   <form method="post" action="/run" class="inline"><input type="hidden" name="kind" value="scan"><button class="primary">Scan all sources now</button></form>
   <form method="post" action="/run" class="inline"><input type="hidden" name="kind" value="carddb"><button>Refresh card database</button></form>
-  <span class="small muted">Card DB: {{ carddb.status if carddb else 'never refreshed' }}{% if carddb %} {{ carddb.started_at|ago }} · next {{ next_carddb|localtime }}{% endif %}</span>
+  <span class="small muted">Card DB: {{ carddb.status if carddb else 'never refreshed' }}{% if carddb %} {{ carddb.started_at|ago }} · next {{ next_carddb|localtime }}{% endif %}
+    · Cardmarket price guide: {% if price_guide.fetched_at %}{{ '{:,}'.format(price_guide.products or 0) }} products, downloaded {{ price_guide.fetched_dt|ago }}{% else %}not downloaded yet{% endif %}</span>
 </div>
 
 <h2>Sources</h2>

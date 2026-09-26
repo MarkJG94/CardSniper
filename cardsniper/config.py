@@ -7,6 +7,7 @@ The ``defaults`` block in config.yaml only seeds them on first start.
 
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -14,6 +15,8 @@ from typing import Any
 
 import yaml
 from dotenv import load_dotenv
+
+log = logging.getLogger(__name__)
 
 DEFAULT_STORES: list[dict[str, Any]] = [
     # Shopify stores expose their whole catalogue as JSON, so they are scanned
@@ -49,14 +52,18 @@ class HttpConfig:
 
 @dataclass
 class CardmarketConfig:
+    """Cardmarket is read from its official daily price guide file - no page scraping.
+
+    Alerts are raised when the lowest listing (any EU seller) is far below trend,
+    with a link to the card's page filtered to UK sellers for you to check.
+    """
+
     enabled: bool = True
-    # auto: plain HTTP with browser fallback on challenge; browser: always browser; http: never browser
-    fetch_mode: str = "auto"
-    max_products_per_run: int = 400
-    min_delay_seconds: float = 4.0
-    max_delay_seconds: float = 9.0
-    seller_country: int = 13  # Cardmarket's id for United Kingdom
-    language: int = 1  # English
+    price_guide_url: str = "https://downloads.s3.cardmarket.com/productCatalog/priceGuide/price_guide_1.json"
+    # re-download the price guide at most this often (Cardmarket publishes it once a day)
+    refresh_hours: float = 6.0
+    seller_country: int = 13  # Cardmarket's id for United Kingdom, used in alert links
+    language: int = 1  # English, used in alert links
     base_url: str = "https://www.cardmarket.com/en/Magic"
 
 
@@ -144,11 +151,14 @@ class Config:
 
 
 def _build(cls, raw: dict[str, Any] | None):
-    raw = raw or {}
+    raw = dict(raw or {})
     known = {f for f in cls.__dataclass_fields__}
     unknown = set(raw) - known
     if unknown:
-        raise ValueError(f"Unknown {cls.__name__} option(s): {', '.join(sorted(unknown))}")
+        # e.g. options from an older config.yaml - don't refuse to start over them
+        log.warning("Ignoring unknown %s option(s): %s", cls.__name__, ", ".join(sorted(unknown)))
+        for key in unknown:
+            raw.pop(key)
     return cls(**raw)
 
 

@@ -1,11 +1,12 @@
 # CardSniper
 
-Watches **Cardmarket (UK sellers only)**, **eBay UK** and popular **UK MTG shops** for Magic: The Gathering
-cards listed below market value, and sends you an **email and/or Telegram alert** with a link to the listing.
+Watches **eBay UK**, popular **UK MTG shops** and **Cardmarket** for Magic: The Gathering cards listed
+below market value, and sends you an **email and/or Telegram alert** with a link to the listing.
 It runs on your own server and comes with a small web dashboard.
 
 - **Every card**: a local database of every paper printing (~100k), refreshed daily from
-  [Scryfall](https://scryfall.com). This includes each printing's Cardmarket trend price, which is used as "market value".
+  [Scryfall](https://scryfall.com), plus Cardmarket's official daily price guide (trend, lowest listing,
+  1/7/30-day sale averages). The Cardmarket trend price is used as "market value".
 - **Exact matching**: specific printing/set (including borderless, showcase and extended art), foil vs non-foil,
   minimum condition, English only, graded cards excluded.
 - **Deal rule**: the listing is at least *X%* below market (default 20%), set globally or per card.
@@ -19,17 +20,18 @@ It runs on your own server and comes with a small web dashboard.
 
 | Source | Method | Notes |
 |---|---|---|
-| Cardmarket | Loads each card's product page, filtered to *seller country = UK, English, min condition*, and reads the offers table. | Cardmarket has no public API for new users and uses Cloudflare bot protection. CardSniper requests pages with a real Chrome network fingerprint, and when a bot check appears it opens a real (headful) Chromium, passes the check, and reuses the clearance cookie. A home broadband IP is the best place to run this. It checks up to 400 product pages per run (configurable) and rotates through the rest over the following runs. |
+| Cardmarket | Cardmarket's official **daily price guide download**. There's no page scraping, so Cloudflare doesn't come into it. | The file only has EU-wide figures, not individual listings or seller countries. A Cardmarket alert means *"the cheapest listing from any EU seller is at least X% below trend"* (30% by default). It links to that card's page filtered to **UK sellers, English and your minimum condition**, so you can see whether a UK copy is on offer. At most once a day. |
 | eBay UK | Official Browse API (free). One search per card name, limited to UK-located, ungraded listings under the deal price. Includes auctions. | Needs free API keys. Auctions only alert if they end within the alert window (24h by default). |
 | UK shops (Total Cards, Axion Now, Manaleak, Magic Madhouse, Chaos Cards, Big Orbit, Mage Cards) | Shopify shops are read in full from their product feed. Other shops are searched card by card. | Edit the shop list in `config.yaml`. See the "Checking a source" section below. |
 
 > ⚠️ **Honest caveats**
 > - CardSniper was written in an environment that could not reach Cardmarket, eBay or the shops, so the
->   scrapers were built against realistic sample pages rather than the live sites. After installing, run
->   `cardsniper probe` for each source once (see the "Checking a source" section below). If a site's layout differs, the fix is usually a
->   CSS selector in `config.yaml`, or send the saved HTML page back to Claude.
-> - Scraping Cardmarket is against its terms of service, and it may block you despite the precautions.
->   Keep the request rate low (the defaults are deliberately slow). This is for personal use only.
+>   integrations were built against realistic sample data rather than the live sites. After installing, run
+>   `cardsniper probe` for each source once (see the "Checking a source" section below). If a shop's layout
+>   differs, the fix is usually a CSS selector in `config.yaml`, or send the saved HTML page back to Claude.
+> - Cardmarket alerts are **leads, not confirmed UK deals**. The cheapest EU listing might be from a German
+>   seller, in poor condition or in another language. The alert link filters to what you want, but the UK
+>   copy may cost more, or may not exist.
 > - "Market" is the Cardmarket trend, which is an EU-wide price. UK sellers are often a bit above it, so a 20%
 >   discount is a genuinely good deal.
 
@@ -93,7 +95,7 @@ Test alerts with **Settings → Send a test alert**, or `cardsniper test-notify`
 ## Checking a source (do this once after installing)
 
 ```bash
-cardsniper probe cardmarket "Sheoldred, the Apocalypse"
+cardsniper probe cardmarket "Sheoldred, the Apocalypse"   # price guide figures for each printing
 cardsniper probe ebay "Sheoldred, the Apocalypse"
 cardsniper probe "Magic Madhouse" "Sheoldred, the Apocalypse" --save-html /tmp/mm.html
 ```
@@ -112,22 +114,24 @@ If a shop returns nothing, or returns the wrong prices, open the saved HTML and 
       selectors: {item: ".product-item", title: ".product-name a", link: ".product-name a", price: ".price", stock: ".stock"}
 ```
 
-## If Cardmarket blocks you
+## Cardmarket alerts
 
-- Leave `headless: false`. The Docker image and systemd unit run the browser on a virtual screen.
-- Lower `max_products_per_run` and/or raise the delays.
-- Try Firefox-based Camoufox, which is often better at getting past bot checks:
-  `pip install "cardsniper[camoufox]" && camoufox fetch`, then set `http: {browser: camoufox}`.
-- The run log shows `Stopping after 5 failures in a row` when a site is refusing requests. The next scheduled
-  run tries again.
+- The price guide downloads with the daily card database refresh. Each scan also re-downloads it if it's more
+  than 6 hours old.
+- The dashboard shows when it was last downloaded. Each card's page shows Cardmarket's trend, lowest listing and
+  sale averages.
+- If the download fails (for example if Cardmarket moves the file), the run log says so and the last downloaded
+  copy is used. The file's address is `price_guide_url` in `config.yaml`. The current one is listed on
+  Cardmarket's downloads page.
+- If a shop shows a bot check, CardSniper can still use a real browser for it (`http.browser` in `config.yaml`).
 
 ## How a deal is decided
 
-1. The listing is matched to a card printing. If the title doesn't identify the printing exactly, it is compared with the
+1. The listing is matched to a card printing (Cardmarket signals already know it). If the title doesn't identify the printing exactly, it is compared with the
    **cheapest** printing it could be, so a cheap reprint never looks like a discounted original.
 2. The listing is rejected if it is graded, non-English, a proxy or a lot/playset, below your condition, or an auction ending too late.
 3. Discount = (market − price) / market. It's a deal if the discount is ≥ your threshold (or the card's watch-rule threshold). Postage is shown
-   separately.
+   separately. Cardmarket signals use the separate Cardmarket threshold, because their price is the cheapest listing in any condition.
 4. An alert is sent unless you were already alerted to this card at the same or a lower price within the re-alert
    window.
 
@@ -145,7 +149,8 @@ Code layout (all under `cardsniper/`):
 - `cardsdb.py`: Scryfall import.
 - `matching.py`: title → printing matcher.
 - `deals.py`: the deal rule and alert de-duplication.
-- `sources/`: Cardmarket, eBay and shops.
-- `fetch.py`: HTTP requests with the browser fallback for bot checks.
+- `priceguide.py`: Cardmarket price guide download and import.
+- `sources/`: Cardmarket (price guide signals), eBay and shops.
+- `fetch.py`: HTTP requests with the browser fallback for bot checks (used for shops).
 - `scanner.py` / `scheduler.py`: running scans and scheduling them.
 - `web/`: the dashboard.

@@ -11,7 +11,7 @@ from cardsniper.notify import format_deal, telegram_text
 from cardsniper.scanner import Scanner
 from cardsniper.settings import UserSettings, save_settings
 from cardsniper.sources.base import Source
-from cardsniper.targets import card_targets, name_targets
+from cardsniper.targets import name_targets
 from cardsniper.web.app import create_app
 
 from conftest import FakeNotifier, scryfall_sample
@@ -69,19 +69,6 @@ def test_scan_lock(cfg, db):
     sc.lock.acquire()
     assert sc.scan() is None
     sc.lock.release()
-
-
-def test_targets_rotate(db):
-    fx = Fx(0.85)
-    settings = UserSettings(min_reference_gbp=5)
-    with db.session() as s:
-        first = card_targets(s, "cardmarket", settings, fx, [], 3)
-        assert len(first) == 3
-        from cardsniper.targets import mark_checked
-        for c in first:
-            mark_checked(s, "cardmarket", c.id)
-        second = card_targets(s, "cardmarket", settings, fx, [], 3)
-        assert not {c.id for c in first} & {c.id for c in second}
 
 
 def test_watched_targets_first(db):

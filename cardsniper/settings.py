@@ -22,6 +22,9 @@ class UserSettings:
     card_db_refresh_hours: float = 24.0
     # Alert when a listing is at least this % below the reference (market) price.
     discount_percent: float = 20.0
+    # Cardmarket alerts use its price guide: alert when the lowest EU listing is this far below trend.
+    # Kept higher by default because the lowest listing may be a worse condition or another language.
+    cardmarket_discount_percent: float = 30.0
     # Ignore cards whose reference price is below this (avoids alerts on 20p bulk).
     min_reference_gbp: float = 5.0
     # Worst acceptable condition on the Cardmarket scale: MT NM EX GD LP PL PO
@@ -33,6 +36,8 @@ class UserSettings:
     auction_window_hours: float = 24.0
     # After alerting on a card, only alert again inside this window if the new deal is cheaper.
     realert_days: float = 7.0
+    # Safety net against floods (e.g. the first run): further deals are kept on the dashboard as "held".
+    max_alerts_per_run: int = 25
     enabled_sources: list[str] | None = None  # None = all configured sources
     notify_email: bool = True
     notify_telegram: bool = True
@@ -42,12 +47,14 @@ class UserSettings:
             raise ValueError("scan_mode must be 'all' or 'watchlist'")
         if self.min_condition not in CONDITIONS:
             raise ValueError(f"min_condition must be one of {CONDITIONS}")
-        if not 0 < self.discount_percent < 100:
-            raise ValueError("discount_percent must be between 0 and 100")
+        if not 0 < self.discount_percent < 100 or not 0 < self.cardmarket_discount_percent < 100:
+            raise ValueError("discount percentages must be between 0 and 100")
         if self.scan_interval_hours < 0.25:
             raise ValueError("scan_interval_hours must be at least 0.25")
         if self.card_db_refresh_hours < 1:
             raise ValueError("card_db_refresh_hours must be at least 1")
+        if self.max_alerts_per_run < 1:
+            raise ValueError("max_alerts_per_run must be at least 1")
         if self.min_reference_gbp < 0 or self.realert_days < 0 or self.auction_window_hours < 0:
             raise ValueError("values cannot be negative")
         return self
@@ -56,7 +63,7 @@ class UserSettings:
         return self.enabled_sources is None or key in self.enabled_sources
 
 
-def _coerce(values: dict[str, Any]) -> dict[str, Any]:
+def coerce(values: dict[str, Any]) -> dict[str, Any]:
     known = {f.name: f for f in fields(UserSettings)}
     out: dict[str, Any] = {}
     for k, v in values.items():
@@ -67,15 +74,17 @@ def _coerce(values: dict[str, Any]) -> dict[str, Any]:
             v = v if isinstance(v, bool) else str(v).lower() in ("1", "true", "yes", "on")
         elif isinstance(default, float):
             v = float(v)
+        elif isinstance(default, int):
+            v = int(float(v))
         out[k] = v
     return out
 
 
 def load_settings(session: Session, defaults: dict[str, Any] | None = None) -> UserSettings:
-    base = _coerce(defaults or {})
+    base = coerce(defaults or {})
     row = session.get(Setting, SETTINGS_KEY)
     if row:
-        base.update(_coerce(json.loads(row.value)))
+        base.update(coerce(json.loads(row.value)))
     return UserSettings(**base).validate()
 
 

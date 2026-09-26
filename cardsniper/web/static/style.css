@@ -38,7 +38,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
         font-size: 12px; white-space: nowrap; }
 .chip.good { color: var(--good); } .chip.warn { color: var(--warn); } .chip.bad { color: var(--bad); }
 .disc { color: var(--good); font-weight: 700; }
-.btn, button { display: inline-block; border: 1px solid var(--line); background: var(--panel); color: var(--text);
+.btn, button { display: inline-block; white-space: nowrap; border: 1px solid var(--line); background: var(--panel); color: var(--text);
                padding: 6px 12px; border-radius: 6px; cursor: pointer; font: inherit; }
 .btn.primary, button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 button.link { border: 0; background: none; color: var(--accent); padding: 0; white-space: nowrap; }

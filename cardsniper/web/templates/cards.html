@@ -22,8 +22,8 @@
   <td>{{ c.collector_number }}</td>
   <td class="small">{{ c.rarity }}</td>
   <td class="small muted">{{ c.treatments.replace(',', ', ') }}</td>
-  <td class="num">{{ (c.eur * fx.eur_to_gbp)|gbp if c.eur else '—' }}</td>
-  <td class="num">{{ (c.eur_foil * fx.eur_to_gbp)|gbp if c.eur_foil else '—' }}</td>
+  <td class="num">{{ (c.ref_eur * fx.eur_to_gbp)|gbp if c.ref_eur else '—' }}</td>
+  <td class="num">{{ (c.ref_eur_foil * fx.eur_to_gbp)|gbp if c.ref_eur_foil else '—' }}</td>
   <td><a href="/cards/{{ c.id }}">details / watch</a></td>
 </tr>
 {% endfor %}

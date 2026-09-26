@@ -1,76 +1,11 @@
 import json
 
 from cardsniper.config import StoreConfig
-from cardsniper.deals import Evaluator
-from cardsniper.fetch import Page, is_challenge
-from cardsniper.models import Card
-from cardsniper.sources.base import ScanContext
-from cardsniper.sources.cardmarket import CardmarketSource, parse_offers
+from cardsniper.fetch import is_challenge
 from cardsniper.sources.ebay import enrich_from_item, listing_from_summary
 from cardsniper.sources.stores import StoreSource, split_title
 
 from conftest import fixture_text
-
-
-def test_parse_cardmarket_offers():
-    offers = parse_offers(fixture_text("cardmarket_product.html"))
-    assert len(offers) == 4
-    first = offers[0]
-    assert first["article_id"] == "1600000001"
-    assert first["seller"] == "BritCards"
-    assert first["location"] == "United Kingdom"
-    assert first["language"] == "English"
-    assert first["condition"] == "NM"
-    assert (first["price"], first["currency"]) == (49.0, "EUR")
-    assert first["quantity"] == 2 and not first["foil"]
-    assert offers[1]["foil"] and offers[1]["condition"] == "EX"
-    assert offers[2]["special"] == ["playset"]
-    assert offers[3]["location"] == "Germany"
-
-
-class FakeFetcher:
-    def __init__(self, pages):
-        self.pages = pages
-        self.calls = []
-
-    def get(self, url, params=None, **kw):
-        self.calls.append((url, params))
-        for key, page in self.pages.items():
-            if key in url:
-                return page
-        raise AssertionError(f"unexpected url {url}")
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *a):
-        pass
-
-
-def make_ctx(cfg, db, index, fx, settings, session):
-    return ScanContext(cfg=cfg, session=session, settings=settings, fx=fx, index=index,
-                       evaluator=Evaluator(settings, index, fx, []), rules=[], log=__import__("logging").getLogger())
-
-
-def test_cardmarket_listings(cfg, db, index, fx, settings):
-    session = db.Session()
-    card = session.query(Card).filter_by(name="Sheoldred, the Apocalypse", set_code="dmu", collector_number="107").one()
-    product = "https://www.cardmarket.com/en/Magic/Products/Singles/Dominaria-United/Sheoldred-the-Apocalypse"
-    fetcher = FakeFetcher({  # first matching key wins
-        "Sheoldred-the-Apocalypse": Page(product, 200, fixture_text("cardmarket_product.html")),
-        "/Magic/Products": Page(product + "?idProduct=1", 200, "<html></html>"),  # idProduct redirect
-    })
-    src = CardmarketSource(cfg)
-    ctx = make_ctx(cfg, db, index, fx, settings, session)
-    listings = src.listings_for(ctx, fetcher, card)
-    assert card.cardmarket_url == product
-    # playset and German seller are dropped, cheapest first
-    assert [l.seller for l in listings] == ["BritCards", "FoilFan"]
-    assert listings[0].card_id == card.id and listings[0].currency == "EUR"
-    assert listings[1].finish == "foil"
-    assert "sellerCountry=13" in listings[0].url and "language=1" in listings[0].url
-    assert fetcher.calls[-1][1]["minCondition"] == 3  # EX
-    session.close()
 
 
 def test_shopify_listings(cfg):

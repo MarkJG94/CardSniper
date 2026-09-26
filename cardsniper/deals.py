@@ -50,6 +50,8 @@ class RawListing:
     quantity: int | None = None
     image_url: str | None = None
     graded: bool = False
+    # Price is an indicator (Cardmarket's lowest EU listing), not a specific UK offer you can buy.
+    indicative: bool = False
     extra: dict = field(default_factory=dict)
 
 
@@ -104,10 +106,10 @@ class Evaluator:
         # printing-specific rules beat whole-name rules
         return sorted(out, key=lambda r: 0 if r.card_id else 1)
 
-    def threshold_for(self, rule: WatchRule | None) -> float:
+    def threshold_for(self, rule: WatchRule | None, indicative: bool = False) -> float:
         if rule and rule.discount_percent is not None:
             return rule.discount_percent
-        return self.settings.discount_percent
+        return self.settings.cardmarket_discount_percent if indicative else self.settings.discount_percent
 
     def finish_wanted(self, finish: str) -> bool:
         if finish == "nonfoil":
@@ -177,12 +179,14 @@ class Evaluator:
         price_gbp = self.fx.to_gbp(listing.price, listing.currency)
         shipping_gbp = self.fx.to_gbp(listing.shipping, listing.currency) if listing.shipping is not None else None
         discount = round((ref_gbp - price_gbp) / ref_gbp * 100, 1)
-        threshold = self.threshold_for(rule)
+        threshold = self.threshold_for(rule, listing.indicative)
         common = dict(match=match, reference_card=ref_card, price_gbp=price_gbp, shipping_gbp=shipping_gbp,
                       reference_gbp=ref_gbp, discount_pct=discount, threshold_pct=threshold, rule=rule)
 
         min_condition = (rule.min_condition if rule and rule.min_condition else s.min_condition)
-        if listing.condition is None:
+        if listing.indicative:
+            pass  # condition is unknown by nature; the alert link filters to your minimum condition
+        elif listing.condition is None:
             if not s.allow_unknown_condition:
                 return reject("condition not stated", **common)
         elif not meets(listing.condition, min_condition):
@@ -204,6 +208,7 @@ class DealRecorder:
         self.session = session
         self.settings = settings
         self.notifier = notifier
+        self.sent = 0
 
     def record(self, ev: Evaluation, now: datetime | None = None) -> tuple[Deal, bool]:
         now = now or utcnow()
@@ -234,6 +239,7 @@ class DealRecorder:
         deal.auction_end = l.auction_end
         deal.quantity = l.quantity
         deal.image_url = l.image_url
+        deal.indicative = l.indicative
         deal.last_seen = now
         self.session.flush()
 
@@ -243,6 +249,10 @@ class DealRecorder:
             return deal, False
         if self.notifier is None or not self.notifier.channels:
             deal.suppressed_reason = "no notification channel configured"
+            return deal, False
+        if self.sent >= self.settings.max_alerts_per_run:
+            deal.suppressed_reason = (f"alert limit of {self.settings.max_alerts_per_run} per run reached "
+                                      f"(change it in Settings)")
             return deal, False
         results = self.notifier.send_deal(deal)
         ok = [ch for ch, err in results.items() if err is None]
@@ -256,6 +266,7 @@ class DealRecorder:
                                channels=",".join(ok), errors=errors or None, sent_at=now))
         deal.alerted = True
         deal.suppressed_reason = None
+        self.sent += 1
         return deal, True
 
     def suppression_reason(self, deal: Deal, now: datetime) -> str | None:

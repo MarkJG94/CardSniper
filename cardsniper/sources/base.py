@@ -31,11 +31,13 @@ class ScanContext:
     stats: dict = field(default_factory=lambda: {"items": 0, "errors": 0, "error_messages": []})
     _failures_in_a_row: int = 0
 
-    def card_targets(self, source: str, limit: int):
-        return targets_mod.card_targets(self.session, source, self.settings, self.fx, self.rules, limit)
-
     def name_targets(self, source: str, limit: int):
         return targets_mod.name_targets(self.session, source, self.settings, self.fx, self.rules, limit)
+
+    def counted(self) -> None:
+        """An item was checked (without per-target rotation state)."""
+        self.stats["items"] += 1
+        self._failures_in_a_row = 0
 
     def checked(self, source: str, target: str) -> None:
         self.stats["items"] += 1

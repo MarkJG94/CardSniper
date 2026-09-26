@@ -36,22 +36,45 @@ class Card(Base):
     released_at: Mapped[str | None] = mapped_column(String(10))
     finishes: Mapped[str] = mapped_column(String(50), default="nonfoil")  # csv
     treatments: Mapped[str] = mapped_column(String(300), default="")  # csv, see matching.treatments_for
-    cardmarket_id: Mapped[int | None] = mapped_column(Integer)
+    cardmarket_id: Mapped[int | None] = mapped_column(Integer, index=True)
     eur: Mapped[float | None] = mapped_column(Float)
     eur_foil: Mapped[float | None] = mapped_column(Float)
     image_url: Mapped[str | None] = mapped_column(String(500))
     scryfall_uri: Mapped[str | None] = mapped_column(String(500))
-    cardmarket_url: Mapped[str | None] = mapped_column(String(500))  # resolved product page
+    cardmarket_url: Mapped[str | None] = mapped_column(String(500))  # unused since page scraping was removed
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+    # Cardmarket's official daily price guide (EUR, all EU sellers)
+    cm_trend: Mapped[float | None] = mapped_column(Float)
+    cm_low: Mapped[float | None] = mapped_column(Float)  # cheapest listing right now, any seller/condition
+    cm_avg1: Mapped[float | None] = mapped_column(Float)  # average sale price, last 1 / 7 / 30 days
+    cm_avg7: Mapped[float | None] = mapped_column(Float)
+    cm_avg30: Mapped[float | None] = mapped_column(Float)
+    cm_trend_foil: Mapped[float | None] = mapped_column(Float)
+    cm_low_foil: Mapped[float | None] = mapped_column(Float)
+    cm_avg1_foil: Mapped[float | None] = mapped_column(Float)
+    cm_avg7_foil: Mapped[float | None] = mapped_column(Float)
+    cm_avg30_foil: Mapped[float | None] = mapped_column(Float)
+    cm_updated: Mapped[datetime | None] = mapped_column(DateTime)
 
     @property
     def finish_list(self) -> list[str]:
         return [f for f in self.finishes.split(",") if f]
 
+    @property
+    def ref_eur(self) -> float | None:
+        """Market (trend) price: Cardmarket's price guide, falling back to Scryfall's copy."""
+        return self.cm_trend if self.cm_trend is not None else self.eur
+
+    @property
+    def ref_eur_foil(self) -> float | None:
+        return self.cm_trend_foil if self.cm_trend_foil is not None else self.eur_foil
+
     def eur_for(self, finish: str) -> float | None:
-        if finish == "nonfoil":
-            return self.eur
-        return self.eur_foil if self.eur_foil is not None else None
+        return self.ref_eur if finish == "nonfoil" else self.ref_eur_foil
+
+    def cm_stat(self, name: str, finish: str) -> float | None:
+        return getattr(self, f"cm_{name}" + ("" if finish == "nonfoil" else "_foil"))
 
 
 class PriceHistory(Base):
@@ -113,6 +136,8 @@ class Deal(Base):
     auction_end: Mapped[datetime | None] = mapped_column(DateTime)
     quantity: Mapped[int | None] = mapped_column(Integer)
     image_url: Mapped[str | None] = mapped_column(String(500))
+    # True for Cardmarket price-guide signals: the price is the lowest EU listing, not a specific UK offer
+    indicative: Mapped[bool | None] = mapped_column(Boolean, default=False)
     alerted: Mapped[bool] = mapped_column(Boolean, default=False)
     suppressed_reason: Mapped[str | None] = mapped_column(String(300))
     first_seen: Mapped[datetime] = mapped_column(DateTime, default=utcnow, index=True)

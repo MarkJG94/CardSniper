@@ -14,6 +14,9 @@
   <div class="field"><label for="discount_percent">Alert when at least this % below market</label>
     <input type="number" step="0.5" min="1" max="99" name="discount_percent" id="discount_percent" value="{{ settings.discount_percent }}">
     <div class="help">Market = Cardmarket trend price in GBP. Watch rules can override this per card.</div></div>
+  <div class="field"><label for="cardmarket_discount_percent">Cardmarket: alert when the lowest EU listing is this % below trend</label>
+    <input type="number" step="0.5" min="1" max="99" name="cardmarket_discount_percent" id="cardmarket_discount_percent" value="{{ settings.cardmarket_discount_percent }}">
+    <div class="help">Cardmarket is read from its daily price guide, which only shows the cheapest listing from any EU seller in any condition, so this is set higher by default. Alerts link to UK sellers for that card.</div></div>
   <div class="field"><label for="min_reference_gbp">Ignore cards worth less than (£)</label>
     <input type="number" step="0.5" min="0" name="min_reference_gbp" id="min_reference_gbp" value="{{ settings.min_reference_gbp }}">
     <div class="help">Lower = more cards scanned and more alerts. Doesn't apply to watched cards.</div></div>
@@ -36,6 +39,9 @@
   <div class="field"><label for="realert_days">Re-alert on the same card only if cheaper, for (days)</label>
     <input type="number" step="0.5" min="0" name="realert_days" id="realert_days" value="{{ settings.realert_days }}">
     <div class="help">After this window, the next deal on the same card alerts again even if it isn't cheaper.</div></div>
+  <div class="field"><label for="max_alerts_per_run">Maximum alerts per scan</label>
+    <input type="number" step="1" min="1" name="max_alerts_per_run" id="max_alerts_per_run" value="{{ settings.max_alerts_per_run }}">
+    <div class="help">Stops a flood of messages (e.g. on the first run). Extra deals still appear on the Deals page as "held".</div></div>
   <div class="field"><label for="notify_email">Email alerts</label><input type="checkbox" name="notify_email" id="notify_email" {{ 'checked' if settings.notify_email }}></div>
   <div class="field"><label for="notify_telegram">Telegram alerts</label><input type="checkbox" name="notify_telegram" id="notify_telegram" {{ 'checked' if settings.notify_telegram }}></div>
   <h2>Sources</h2>

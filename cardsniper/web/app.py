@@ -6,7 +6,7 @@ import base64
 from contextlib import asynccontextmanager
 import secrets as pysecrets
 from dataclasses import fields
-from datetime import timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import quote
 from zoneinfo import ZoneInfo
@@ -24,8 +24,9 @@ from ..db import Database
 from ..matching import norm
 from ..models import Alert, Card, Deal, PriceHistory, ScanRun, WatchRule, utcnow
 from ..notify import Notifier
+from ..priceguide import state as price_guide_state
 from ..scanner import Scanner
-from ..settings import UserSettings, load_settings, save_settings
+from ..settings import UserSettings, coerce, load_settings, save_settings
 
 HERE = Path(__file__).parent
 
@@ -136,9 +137,12 @@ def create_app(cfg: Config, db: Database, scanner: Scanner, jobs=None, start_job
             }
             recent = s.query(Deal).order_by(Deal.last_seen.desc()).limit(12).all()
             fx = get_fx(s, cfg.fallback_eur_to_gbp, fetch=False)
+            guide = price_guide_state(s)
+        if guide.get("fetched_at"):
+            guide["fetched_dt"] = datetime.fromisoformat(guide["fetched_at"])
         notifier = Notifier(cfg, settings)
         return render(request, "dashboard.html", stats=stats, recent=recent, sources=scanner.sources,
-                      last_runs=last_runs, carddb=carddb, settings=settings, fx=fx,
+                      last_runs=last_runs, carddb=carddb, settings=settings, fx=fx, price_guide=guide,
                       channels=[c.name for c in notifier.channels],
                       next_scan=jobs.next_run("scan") if jobs else None,
                       next_carddb=jobs.next_run("carddb") if jobs else None)
@@ -287,8 +291,7 @@ def create_app(cfg: Config, db: Database, scanner: Scanner, jobs=None, start_job
         chosen = form.getlist("enabled_sources")
         values["enabled_sources"] = None if len(chosen) == len(scanner.sources) else list(chosen)
         try:
-            new = UserSettings(**{k: (float(v) if isinstance(getattr(UserSettings, k, None), float) else v)
-                                  for k, v in values.items()}).validate()
+            new = UserSettings(**coerce(values)).validate()
         except (ValueError, TypeError) as exc:
             return back("/settings", err=str(exc))
         with db.session() as s:
